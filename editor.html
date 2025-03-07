@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>词云编辑器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#7FD3F8',
+                        secondary: '#A5B9FA'
+                    },
+                    borderRadius: {
+                        'none': '0px',
+                        'sm': '4px',
+                        DEFAULT: '8px',
+                        'md': '12px',
+                        'lg': '16px',
+                        'xl': '20px',
+                        '2xl': '24px',
+                        '3xl': '32px',
+                        'full': '9999px',
+                        'button': '8px'
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+        :where([class^="ri-"])::before { content: "\f3c2"; }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .gradient-preview {
+            background: linear-gradient(to right, var(--color-1, #7FD3F8), var(--color-2, #A5B9FA), var(--color-3, #7FD3F8));
+        }
+        .glass-effect {
+            -webkit-backdrop-filter: blur(8px);
+            backdrop-filter: blur(8px);
+            background: rgba(255, 255, 255, 0.9);
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-primary to-secondary">
+    <div class="flex h-screen">
+        <div class="w-2/3 glass-effect p-6 border-r border-white border-opacity-20">
+            <div class="h-16 flex items-center justify-between mb-4">
+                <div class="flex items-center space-x-4">
+                    <button class="w-10 h-10 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-button cursor-pointer" id="undoBtn">
+                        <i class="ri-arrow-go-back-line ri-lg"></i>
+                    </button>
+                    <button class="w-10 h-10 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-button cursor-pointer" id="redoBtn">
+                        <i class="ri-arrow-go-forward-line ri-lg"></i>
+                    </button>
+                    <div class="h-6 w-px bg-gray-200"></div>
+                    <div class="flex items-center space-x-2">
+                        <button class="px-3 py-1 text-sm border border-gray-200 rounded-button hover:bg-gray-50 cursor-pointer">100%</button>
+                        <button class="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-button cursor-pointer">
+                            <i class="ri-zoom-in-line"></i>
+                        </button>
+                        <button class="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-button cursor-pointer">
+                            <i class="ri-zoom-out-line"></i>
+                        </button>
+                    </div>
+                </div>
+                <button class="flex items-center px-4 py-2 bg-primary text-white rounded-button hover:bg-opacity-90 cursor-pointer">
+                    <i class="ri-download-line mr-2"></i>
+                    导出
+                </button>
+            </div>
+            <div class="bg-white/80 h-[calc(100%-5rem)] rounded-lg relative overflow-hidden" id="canvas">
+                <div class="absolute inset-0 flex items-center justify-center" id="loadingOverlay" style="display: none;">
+                    <div class="glass-effect p-6 rounded-lg flex items-center">
+                        <i class="ri-loader-4-line animate-spin mr-3 text-primary"></i>
+                        <span>正在生成词云...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="w-1/3 glass-effect overflow-y-auto">
+            <div class="p-6">
+                <h2 class="text-xl font-semibold mb-6">设置</h2>
+                <div class="space-y-6">
+                    <div class="border border-gray-200 rounded-lg p-4 bg-white/80">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-medium flex items-center">
+                                <i class="ri-palette-line mr-2"></i>
+                                颜色风格
+                            </h3>
+                            <button class="text-sm text-gray-500 hover:text-gray-700 cursor-pointer">重置</button>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="text-sm text-gray-600 mb-2 block">预设风格</label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button class="p-3 rounded-lg border border-gray-200 hover:border-primary cursor-pointer color-scheme" data-colors='["#4B6BF5", "#36DDD0", "#FFA07A"]'>
+                                        <div class="flex space-x-1 mb-2">
+                                            <div class="w-6 h-6 rounded" style="background-color: #4B6BF5"></div>
+                                            <div class="w-6 h-6 rounded" style="background-color: #36DDD0"></div>
+                                            <div class="w-6 h-6 rounded" style="background-color: #FFA07A"></div>
+                                        </div>
+                                        <span class="text-sm">轻快蓝绿</span>
+                                    </button>
+                                    <button class="p-3 rounded-lg border border-gray-200 hover:border-primary cursor-pointer color-scheme" data-colors='["#FF69B4", "#DEB887", "#40E0D0"]'>
+                                        <div class="flex space-x-1 mb-2">
+                                            <div class="w-6 h-6 rounded" style="background-color: #FF69B4"></div>
+                                            <div class="w-6 h-6 rounded" style="background-color: #DEB887"></div>
+                                            <div class="w-6 h-6 rounded" style="background-color: #40E0D0"></div>
+                                        </div>
+                                        <span class="text-sm">粉棕青</span>
+                                    </button>
+                                    <button class="p-3 rounded-lg border border-gray-200 hover:border-primary cursor-pointer color-scheme" data-colors='["#556B2F", "#8FBC8F", "#BCEE68"]'>
+                                        <div class="flex space-x-1 mb-2">
+                                            <div class="w-6 h-6 rounded" style="background-color: #556B2F"></div>
+                                            <div class="w-6 h-6 rounded" style="background-color: #8FBC8F"></div>
+                                            <div class="w-6 h-6 rounded" style="background-color: #BCEE68"></div>
+                                        </div>
+                                        <span class="text-sm">自然绿</span>
+                                    </button>
+                                    <button class="p-3 rounded-lg border border-gray-200 hover:border-primary cursor-pointer color-scheme" data-colors='["#2F4F4F", "#778899", "#B0C4DE"]'>
+                                        <div class="flex space-x-1 mb-2">
+                                            <div class="w-6 h-6 rounded" style="background-color: #2F4F4F"></div>
+                                            <div class="w-6 h-6 rounded" style="background-color: #778899"></div>
+                                            <div class="w-6 h-6 rounded" style="background-color: #B0C4DE"></div>
+                                        </div>
+                                        <span class="text-sm">现代灰</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-sm text-gray-600 mb-2 block">背景颜色</label>
+                                <div class="flex items-center space-x-4">
+                                    <button class="w-8 h-8 rounded border border-gray-200 cursor-pointer" style="background-color: #ffffff"></button>
+                                    <input type="range" class="flex-1" min="0" max="100" value="100">
+                                    <span class="text-sm text-gray-600">100%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="border border-gray-200 rounded-lg p-4 bg-white/80">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-medium flex items-center">
+                                <i class="ri-text-spacing line mr-2"></i>
+                                文字
+                            </h3>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="text-sm text-gray-600 mb-2 block">字体</label>
+                                <div class="relative">
+                                    <button class="w-full px-3 py-2 text-left border border-gray-200 rounded-button flex items-center justify-between cursor-pointer" id="fontSelector">
+                                        <span>Inter</span>
+                                        <i class="ri-arrow-down-s-line"></i>
+                                    </button>
+                                    <div class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg hidden" id="fontDropdown">
+                                        <div class="p-2">
+                                            <input type="text" placeholder="搜索字体..." class="w-full px-3 py-2 border border-gray-200 rounded-button text-sm">
+                                        </div>
+                                        <div class="max-h-48 overflow-y-auto">
+                                            <button class="w-full px-3 py-2 text-left hover:bg-gray-50 cursor-pointer">Arial</button>
+                                            <button class="w-full px-3 py-2 text-left hover:bg-gray-50 cursor-pointer">Helvetica</button>
+                                            <button class="w-full px-3 py-2 text-left hover:bg-gray-50 cursor-pointer">Inter</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-sm text-gray-600 mb-2 block">字体大小范围</label>
+                                <div class="flex items-center space-x-4">
+                                    <input type="number" class="w-16 px-3 py-1 border border-gray-200 rounded-button text-sm" value="8">
+                                    <input type="range" class="flex-1" min="8" max="120" value="8">
+                                    <input type="number" class="w-16 px-3 py-1 border border-gray-200 rounded-button text-sm" value="120">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-sm text-gray-600 mb-2 block">最大词数</label>
+                                <div class="flex items-center space-x-2">
+                                    <button class="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-button cursor-pointer">-</button>
+                                    <input type="number" class="w-20 px-3 py-1 border border-gray-200 rounded-button text-center" value="200">
+                                    <button class="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-button cursor-pointer">+</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="border border-gray-200 rounded-lg p-4 bg-white/80">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-medium flex items-center">
+                                <i class="ri-layout-line mr-2"></i>
+                                布局
+                            </h3>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="text-sm text-gray-600 mb-2 block">形状</label>
+                                <div class="grid grid-cols-4 gap-2">
+                                    <button class="aspect-square border border-gray-200 rounded flex items-center justify-center cursor-pointer hover:border-primary shape-btn" data-shape="circle">
+                                        <i class="ri-circle-line ri-xl"></i>
+                                    </button>
+                                    <button class="aspect-square border border-gray-200 rounded flex items-center justify-center cursor-pointer hover:border-primary shape-btn" data-shape="heart">
+                                        <i class="ri-heart-line ri-xl"></i>
+                                    </button>
+                                    <button class="aspect-square border border-gray-200 rounded flex items-center justify-center cursor-pointer hover:border-primary shape-btn" data-shape="star">
+                                        <i class="ri-star-line ri-xl"></i>
+                                    </button>
+                                    <button class="aspect-square border border-gray-200 rounded flex items-center justify-center cursor-pointer hover:border-primary shape-btn" data-shape="cloud">
+                                        <i class="ri-cloud-line ri-xl"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-sm text-gray-600 mb-2 block">方向</label>
+                                <div class="flex space-x-2">
+                                    <button class="flex-1 px-3 py-2 border border-gray-200 rounded-button flex items-center justify-center space-x-2 cursor-pointer hover:bg-gray-50">
+                                        <i class="ri-arrow-left-right-line"></i>
+                                        <span>水平</span>
+                                    </button>
+                                    <button class="flex-1 px-3 py-2 border border-gray-200 rounded-button flex items-center justify-center space-x-2 cursor-pointer hover:bg-gray-50">
+                                        <i class="ri-arrow-up-down-line"></i>
+                                        <span>垂直</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-sm text-gray-600 mb-2 block">密度</label>
+                                <div class="flex items-center space-x-4">
+                                    <input type="range" class="flex-1" min="0" max="100" value="50">
+                                    <span class="text-sm text-gray-600">50%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const fontSelector = document.getElementById('fontSelector');
+        const fontDropdown = document.getElementById('fontDropdown');
+        const undoBtn = document.getElementById('undoBtn');
+        const redoBtn = document.getElementById('redoBtn');
+        const canvas = document.getElementById('canvas');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+
+        // 获取所有设置控件
+        const colorButtons = document.querySelectorAll('.gradient-preview + .flex button');
+        const backgroundColorButton = document.querySelector('input[type="range"]');
+        const fontSizeInputs = document.querySelectorAll('input[type="number"]');
+        const maxWordsInput = document.querySelector('input[type="number"]:last-of-type');
+        const shapeButtons = document.querySelectorAll('.grid.grid-cols-4 button');
+        const orientationButtons = document.querySelectorAll('.flex.space-x-2 button');
+        const densitySlider = document.querySelector('input[type="range"]:last-of-type');
+
+        let currentState = {
+            colors: ['#7FD3F8', '#A5B9FA', '#7FD3F8'],
+            backgroundColor: '#ffffff',
+            font: 'Inter',
+            fontSize: [8, 120],
+            maxWords: 200,
+            shape: 'circle',
+            orientation: 'horizontal',
+            density: 50,
+            wordData: {}
+        };
+
+        const history = [];
+        let currentIndex = -1;
+
+        function updateState(newState) {
+            currentIndex++;
+            history.splice(currentIndex);
+            history.push(newState);
+            currentState = newState;
+            updateUndoRedoButtons();
+            generateWordCloud();
+        }
+
+        function undo() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                currentState = history[currentIndex];
+                updateUndoRedoButtons();
+                generateWordCloud();
+            }
+        }
+
+        function redo() {
+            if (currentIndex < history.length - 1) {
+                currentIndex++;
+                currentState = history[currentIndex];
+                updateUndoRedoButtons();
+                generateWordCloud();
+            }
+        }
+
+        function updateUndoRedoButtons() {
+            undoBtn.disabled = currentIndex <= 0;
+            redoBtn.disabled = currentIndex >= history.length - 1;
+            undoBtn.style.opacity = undoBtn.disabled ? '0.5' : '1';
+            redoBtn.style.opacity = redoBtn.disabled ? '0.5' : '1';
+        }
+
+        function showLoading() {
+            loadingOverlay.style.display = 'flex';
+        }
+
+        function hideLoading() {
+            loadingOverlay.style.display = 'none';
+        }
+
+        async function generateWordCloud() {
+            showLoading();
+            try {
+                const response = await fetch('http://localhost:5000/api/generate-wordcloud', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        words: currentState.wordData.chinese || [],
+                        settings: {
+                            backgroundColor: currentState.backgroundColor,
+                            maxWords: currentState.maxWords,
+                            fontSize: currentState.fontSize,
+                            orientation: currentState.orientation,
+                            density: currentState.density,
+                            colors: currentState.colors
+                        }
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    const img = document.createElement('img');
+                    img.src = `data:image/png;base64,${data.image}`;
+                    img.className = 'w-full h-full object-contain';
+                    
+                    // 清除画布
+                    canvas.innerHTML = '';
+                    // 添加加载遮罩
+                    canvas.appendChild(loadingOverlay);
+                    // 添加词云图
+                    canvas.appendChild(img);
+                } else {
+                    throw new Error(data.error || '生成词云失败');
+                }
+            } catch (error) {
+                console.error('生成词云时出错:', error);
+                canvas.innerHTML = `<div class="text-red-500 text-center p-4">生成词云失败: ${error.message}</div>`;
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // 事件监听器
+        colorButtons.forEach((button, index) => {
+            if (button.querySelector('i')) return; // 跳过添加按钮
+            button.addEventListener('click', () => {
+                const newColors = [...currentState.colors];
+                newColors[index] = button.style.backgroundColor;
+                updateState({ ...currentState, colors: newColors });
+            });
+        });
+
+        backgroundColorButton.addEventListener('input', (e) => {
+            const opacity = e.target.value;
+            updateState({
+                ...currentState,
+                backgroundColor: `rgba(255, 255, 255, ${opacity / 100})`
+            });
+        });
+
+        fontSizeInputs.forEach((input, index) => {
+            input.addEventListener('change', (e) => {
+                const newFontSize = [...currentState.fontSize];
+                newFontSize[index] = parseInt(e.target.value);
+                updateState({ ...currentState, fontSize: newFontSize });
+            });
+        });
+
+        maxWordsInput.addEventListener('change', (e) => {
+            updateState({
+                ...currentState,
+                maxWords: parseInt(e.target.value)
+            });
+        });
+
+        shapeButtons.forEach((button, index) => {
+            button.addEventListener('click', () => {
+                const shape = button.dataset.shape;
+                updateState({
+                    ...currentState,
+                    shape: shape
+                });
+                
+                // 更新选中状态
+                document.querySelectorAll('.shape-btn').forEach(btn => {
+                    btn.classList.remove('border-primary');
+                });
+                button.classList.add('border-primary');
+            });
+        });
+
+        orientationButtons.forEach((button, index) => {
+            button.addEventListener('click', () => {
+                const orientations = ['horizontal', 'vertical'];
+                updateState({
+                    ...currentState,
+                    orientation: orientations[index]
+                });
+            });
+        });
+
+        densitySlider.addEventListener('input', (e) => {
+            updateState({
+                ...currentState,
+                density: parseInt(e.target.value)
+            });
+        });
+
+        undoBtn.addEventListener('click', undo);
+        redoBtn.addEventListener('click', redo);
+
+        // 从URL参数获取分词结果
+        const urlParams = new URLSearchParams(window.location.search);
+        const wordData = JSON.parse(decodeURIComponent(urlParams.get('data') || '{}'));
+
+        // 初始化状态
+        updateState({
+            ...currentState,
+            wordData: wordData
+        });
+
+        // 添加颜色方案选择事件监听
+        document.querySelectorAll('.color-scheme').forEach(button => {
+            button.addEventListener('click', () => {
+                const colors = JSON.parse(button.dataset.colors);
+                updateState({
+                    ...currentState,
+                    colors: colors
+                });
+                
+                // 更新选中状态
+                document.querySelectorAll('.color-scheme').forEach(btn => {
+                    btn.classList.remove('border-primary');
+                });
+                button.classList.add('border-primary');
+            });
+        });
+    </script>
+</body>
+</html> 
