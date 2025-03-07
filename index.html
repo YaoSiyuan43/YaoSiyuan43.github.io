@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="text-size-adjust" content="100%">
+    <title>Word Cloud Cloud</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+    :where([class^="ri-"])::before { content: "\f3c2"; }
+    @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+    }
+    @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.1); opacity: 1; }
+    }
+    .floating-text {
+    animation: float 6s ease-in-out infinite;
+    }
+    .pulse-effect {
+    animation: pulse 3s ease-in-out infinite;
+    }
+    .glass-effect {
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    background: rgba(255, 255, 255, 0.9);
+    }
+    .word-cloud-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: 2rem;
+    justify-content: center;
+    }
+    .word-item {
+    padding: 0.5rem 1rem;
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.8);
+    transition: all 0.3s ease;
+    }
+    .word-item:hover {
+    transform: scale(1.1);
+    background: rgba(255, 255, 255, 0.95);
+    }
+    .word-frequency {
+    font-size: 0.8rem;
+    color: #666;
+    margin-left: 0.5rem;
+    }
+    .result-section {
+    margin-top: 2rem;
+    padding: 1rem;
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.8);
+    }
+    .section-title {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+    color: #333;
+    }
+    .error-message {
+    color: #ff4444;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    background: rgba(255, 68, 68, 0.1);
+    margin: 1rem 0;
+    text-align: center;
+    }
+    #processing-modal {
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    }
+    </style>
+    <script>
+    tailwind.config = {
+    theme: {
+    extend: {
+    colors: {
+    primary: '#7FD3F8',
+    secondary: '#A5B9FA'
+    },
+    borderRadius: {
+    'none': '0px',
+    'sm': '4px',
+    DEFAULT: '8px',
+    'md': '12px',
+    'lg': '16px',
+    'xl': '20px',
+    '2xl': '24px',
+    '3xl': '32px',
+    'full': '9999px',
+    'button': '8px'
+    }
+    }
+    }
+    }
+    </script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-primary to-secondary overflow-x-hidden">
+    <div class="fixed inset-0 pointer-events-none">
+        <div id="floating-chars" class="absolute inset-0"></div>
+    </div>
+    <div class="relative min-h-screen flex flex-col items-center justify-center px-4">
+        <div class="text-center mb-8">
+            <img src="https://static.readdy.ai/image/318521b068f7ad70bb2f67782eb94124/5d4d6dd567a1430a84f2c423fcabbb4c.png" alt="Word Cloud Logo" class="h-80 mx-auto mb-2 floating-text">
+            <p class="text-white text-xl">将您的文本转换为精美的词云</p>
+        </div>
+        <div class="glass-effect w-full max-w-3xl rounded-lg p-8 shadow-xl border border-white border-opacity-20">
+            <div id="drop-zone" class="relative border-2 border-dashed border-primary rounded-lg p-8 text-center transition-all duration-300 hover:border-secondary cursor-pointer" role="button" tabindex="0" aria-label="上传文件">
+                <i class="ri-upload-cloud-line text-6xl text-primary mb-4"></i>
+                <p class="text-gray-600 mb-2">将文件拖放到此处</p>
+                <p class="text-sm text-gray-500">或</p>
+                <button class="mt-4 bg-primary text-white px-6 py-2 rounded-button hover:bg-opacity-90 transition-colors duration-300 whitespace-nowrap cursor-pointer" aria-label="选择文件">
+                    选择文件
+                </button>
+                <input type="file" id="file-input" class="hidden" accept=".txt,.docx,.xlsx,.csv" aria-label="文件输入">
+                <div class="mt-4 flex justify-center gap-4">
+                    <span class="text-sm text-gray-500">支持的格式：</span>
+                    <span class="text-sm text-gray-600 font-medium">.TXT</span>
+                    <span class="text-sm text-gray-600 font-medium">.DOCX</span>
+                    <span class="text-sm text-gray-600 font-medium">.XLSX</span>
+                    <span class="text-sm text-gray-600 font-medium">.CSV</span>
+                </div>
+            </div>
+            <div class="mt-6">
+                <textarea id="text-input" class="w-full h-32 p-4 rounded-lg border-none focus:ring-2 focus:ring-primary resize-none glass-effect" placeholder="在此输入或粘贴您的文本..." aria-label="文本输入"></textarea>
+            </div>
+            <div class="mt-6 flex justify-between items-center">
+                <div class="flex gap-4">
+                    <button id="generate-btn" class="bg-primary text-white px-6 py-2 rounded-button hover:bg-opacity-90 transition-colors duration-300 whitespace-nowrap cursor-pointer" aria-label="生成词云">
+                        分词
+                    </button>
+                    <button id="clear-btn" class="border border-gray-300 text-gray-600 px-6 py-2 rounded-button hover:bg-gray-50 transition-colors duration-300 whitespace-nowrap cursor-pointer" aria-label="清除输入">
+                        清除
+                    </button>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="theme-toggle" class="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-full transition-colors duration-300 cursor-pointer" aria-label="切换主题">
+                        <i class="ri-contrast-line"></i>
+                    </button>
+                    <button id="settings-btn" class="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-full transition-colors duration-300 cursor-pointer" aria-label="打开设置">
+                        <i class="ri-settings-3-line"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="result-container" class="w-full max-w-3xl mt-8"></div>
+    </div>
+    <div id="processing-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
+        <div class="glass-effect rounded-lg p-8 text-center">
+            <div class="pulse-effect">
+                <i class="ri-loader-4-line text-4xl text-primary mb-4"></i>
+            </div>
+            <p class="text-gray-700">正在处理您的文本...</p>
+        </div>
+    </div>
+    <script>
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const textInput = document.getElementById('text-input');
+    const generateBtn = document.getElementById('generate-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const processingModal = document.getElementById('processing-modal');
+    const resultContainer = document.getElementById('result-container');
+
+    function createFloatingChars() {
+        const container = document.getElementById('floating-chars');
+        const chars = '词云云WordCloud';
+        for(let i = 0; i < 20; i++) {
+            const char = document.createElement('div');
+            char.className = 'absolute text-white text-opacity-20 text-2xl floating-text';
+            char.style.left = `${Math.random() * 100}%`;
+            char.style.top = `${Math.random() * 100}%`;
+            char.style.animationDelay = `${Math.random() * 5}s`;
+            char.textContent = chars[Math.floor(Math.random() * chars.length)];
+            container.appendChild(char);
+        }
+    }
+
+    function showProcessing() {
+        processingModal.style.display = 'flex';
+    }
+
+    function hideProcessing() {
+        processingModal.style.display = 'none';
+    }
+
+    function showError(message) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-message';
+        errorDiv.textContent = message;
+        resultContainer.innerHTML = '';
+        resultContainer.appendChild(errorDiv);
+    }
+
+    function displayResults(data) {
+        resultContainer.innerHTML = '';
+        
+        // 显示中文词云
+        if (data.chinese && data.chinese.length > 0) {
+            const chineseSection = document.createElement('div');
+            chineseSection.className = 'result-section';
+            chineseSection.innerHTML = '<h3 class="section-title">中文词云</h3>';
+            
+            const chineseCloud = document.createElement('div');
+            chineseCloud.className = 'word-cloud-container';
+            data.chinese.slice(0, 50).forEach(([word, freq]) => {
+                const wordItem = document.createElement('div');
+                wordItem.className = 'word-item';
+                wordItem.innerHTML = `${word}<span class="word-frequency">${freq}</span>`;
+                chineseCloud.appendChild(wordItem);
+            });
+            
+            chineseSection.appendChild(chineseCloud);
+            resultContainer.appendChild(chineseSection);
+        }
+        
+        // 显示英文词云
+        if (data.english && data.english.length > 0) {
+            const englishSection = document.createElement('div');
+            englishSection.className = 'result-section';
+            englishSection.innerHTML = '<h3 class="section-title">英文词云</h3>';
+            
+            const englishCloud = document.createElement('div');
+            englishCloud.className = 'word-cloud-container';
+            data.english.slice(0, 50).forEach(([word, freq]) => {
+                const wordItem = document.createElement('div');
+                wordItem.className = 'word-item';
+                wordItem.innerHTML = `${word}<span class="word-frequency">${freq}</span>`;
+                englishCloud.appendChild(wordItem);
+            });
+            
+            englishSection.appendChild(englishCloud);
+            resultContainer.appendChild(englishSection);
+        }
+
+        // 添加生成词云按钮
+        const generateCloudBtn = document.createElement('button');
+        generateCloudBtn.className = 'mt-6 bg-primary text-white px-6 py-2 rounded-button hover:bg-opacity-90 transition-colors duration-300 whitespace-nowrap cursor-pointer mx-auto block';
+        generateCloudBtn.innerHTML = '<i class="ri-cloud-line mr-2"></i>生成词云';
+        generateCloudBtn.onclick = () => {
+            const wordData = {
+                chinese: data.chinese || [],
+                english: data.english || []
+            };
+            window.location.href = `editor.html?data=${encodeURIComponent(JSON.stringify(wordData))}`;
+        };
+        resultContainer.appendChild(generateCloudBtn);
+    }
+
+    async function processFile(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        try {
+            showProcessing();
+            const response = await fetch('http://localhost:5000/api/process', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || '处理文件时出错');
+            }
+            
+            const data = await response.json();
+            if (!data || (!data.chinese && !data.english)) {
+                throw new Error('无效的响应数据');
+            }
+            
+            displayResults(data);
+        } catch (error) {
+            console.error('Error:', error);
+            if (error.message === 'Failed to fetch') {
+                showError('无法连接到服务器，请确保后端服务正在运行');
+            } else {
+                showError(error.message || '处理文件时出错');
+            }
+        } finally {
+            hideProcessing();
+        }
+    }
+
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('border-secondary');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('border-secondary');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('border-secondary');
+        const file = e.dataTransfer.files[0];
+        if (file) {
+            processFile(file);
+        }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            processFile(file);
+        }
+    });
+
+    clearBtn.addEventListener('click', () => {
+        textInput.value = '';
+        fileInput.value = '';
+        resultContainer.innerHTML = '';
+    });
+
+    generateBtn.addEventListener('click', async () => {
+        const text = textInput.value.trim();
+        if (!text) return;
+        
+        // 创建临时文件
+        const blob = new Blob([text], { type: 'text/plain' });
+        const file = new File([blob], 'input.txt', { type: 'text/plain' });
+        await processFile(file);
+    });
+
+    createFloatingChars();
+    </script>
+</body>
+</html> 
