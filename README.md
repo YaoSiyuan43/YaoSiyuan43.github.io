@@ -13,7 +13,7 @@
 - 🚀**极简交互流程**：仅需「三步生成」词云图，较传统工具操作步骤减少60%，大幅提升用户体验。
 ![image](https://github.com/YaoSiyuan43/YaoSiyuan43.github.io/blob/main/demo%20images/0.png)
 ![image](https://github.com/YaoSiyuan43/YaoSiyuan43.github.io/blob/main/demo%20images/1.png)
-![image](https://github.com/YaoSiyuan43/YaoSiyuan43.github.io/blob/main/demo%20images/2.png
+![image](https://github.com/YaoSiyuan43/YaoSiyuan43.github.io/blob/main/demo%20images/2.png)
 ![image](https://github.com/YaoSiyuan43/YaoSiyuan43.github.io/blob/main/demo%20images/3.png)
 ![image](https://github.com/YaoSiyuan43/YaoSiyuan43.github.io/blob/main/demo%20images/4.png)
 ## 🤖三、技术亮点
